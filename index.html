@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Tracker Interface</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" id="theme-stylesheet" href="css/cyberpunk.css">
+</head>
+<body>
+    <header>
+        <h1>Solaris Prime Tracker</h1>
+        <div id="theme-switcher-container">
+            <span>⚙️</span>
+        </div>
+    </header>
+    <div class="content-wrapper">
+        <aside>
+            <h2>Motor Controls</h2>
+            <button id="activate-motor-btn">Activate Motor</button>
+            <button id="deactivate-motor-btn">Deactivate Motor</button>
+        </aside>
+        <main>
+            <div class="chart-container" style="width: 80%; margin: auto;"> <!-- Optional: wrapper for sizing -->
+                <h2>Daily Solar Production</h2>
+                <canvas id="solarProductionChart"></canvas>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>Footer</p>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

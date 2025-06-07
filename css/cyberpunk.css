@@ -1,0 +1,62 @@
+body {
+    background-color: #0a0a23;
+    color: #00ff00;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+header {
+    background-color: #1a1a3a; /* Slightly lighter dark shade */
+    color: #00ffff; /* Bright cyan */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #00ffff; /* Neon border */
+}
+
+/* Styling for the theme switcher icon/text if needed */
+#theme-switcher-container span {
+    cursor: pointer;
+    font-size: 1.5em; /* Make icon a bit larger */
+}
+
+aside {
+    background-color: #101028; /* Darker than header, but not body background */
+    padding: 1em;
+    border-right: 1px solid #00ff00; /* Neon border */
+}
+
+main {
+    padding: 1em;
+    background-color: #08081f; /* Slightly different dark shade for main content area */
+}
+
+footer {
+    background-color: #1a1a3a;
+    color: #00ffff;
+    text-align: center;
+    border-top: 1px solid #00ff00; /* Neon border */
+}
+
+/* Basic link styling for cyberpunk theme */
+a {
+    color: #00ffff;
+}
+
+a:hover {
+    color: #ffffff;
+}
+
+/* Basic button styling (can be expanded) */
+button, input[type="button"], input[type="submit"] {
+    background-color: #00ff00;
+    color: #0a0a23;
+    border: 1px solid #00ff00;
+    padding: 0.5em 1em;
+    cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+button:hover, input[type="button"]:hover, input[type="submit"]:hover {
+    background-color: #0a0a23;
+    color: #00ff00;
+}
