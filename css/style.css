@@ -1,0 +1,111 @@
+/* --- DÉFINITION DES THÈMES --- */
+:root { /* Thème Sombre */
+    --bg-color: #0f172a; --card-color: #1e293b; --text-color: #e2e8f0; --text-muted: #94a3b8;
+    --accent-color: #00ffcc; --border-color: #334155;
+    --font-display: 'Orbitron', sans-serif; --font-body: 'Roboto Mono', monospace;
+}
+body.light-mode { /* Thème Lumineux */
+    --bg-color: #f1f5f9; --card-color: #ffffff; --text-color: #0f172a; --text-muted: #475569;
+    --accent-color: #0f766e; --border-color: #e2e8f0; --font-body: 'Quicksand', sans-serif;
+}
+body.cyberpunk-mode { /* Thème Cyberpunk */
+    --cyber-yellow: rgb(230, 222, 16); --cyber-blue: rgb(75, 128, 189); --bg-color: #0A0A1F;
+    --card-color: rgba(12, 12, 44, 0.6); --text-color: var(--cyber-yellow); --text-muted: rgb(180, 175, 80);
+    --accent-color: var(--cyber-yellow); --border-color: var(--cyber-blue);
+    background-image: linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    background-size: 40px 40px; animation: scanline 10s linear infinite;
+}
+body.foundry-mode { /* Thème Foundry */
+    --foundry-yellow: #FFC300; --foundry-dark: #121212; --foundry-metal-dark: #242424;
+    --bg-color: var(--foundry-dark); --card-color: var(--foundry-metal-dark); --text-color: #EAEAEA;
+    --text-muted: #888888; --accent-color: var(--foundry-yellow); --border-color: #454545;
+}
+body.solarpunk-mode { /* Thème Solarpunk */
+    --solar-green-bg: #F0FFF0; --solar-green-card: #ffffff; --solar-green-text: #2F4F2F;
+    --solar-green-muted: #556B2F; --solar-green-accent: #8FBC8F; --solar-green-border: #6B8E23;
+    --bg-color: var(--solar-green-bg); --card-color: var(--solar-green-card); --text-color: var(--solar-green-text);
+    --text-muted: var(--solar-green-muted); --accent-color: var(--solar-green-accent); --border-color: var(--solar-green-border);
+    --font-body: 'Quicksand', sans-serif;
+}
+
+/* === NOUVEAU THÈME : VHS / Y2K === */
+body.vhs-mode {
+    --vhs-cyan: #00ffff; --vhs-magenta: #ff00ff; --vhs-bg: #0d0d2e;
+    --bg-color: var(--vhs-bg); --card-color: rgba(0, 0, 0, 0.4); --text-color: var(--vhs-cyan);
+    --text-muted: #8888ff; --accent-color: var(--vhs-magenta); --border-color: var(--vhs-magenta);
+    --font-display: 'VT323', monospace; --font-body: 'VT323', monospace; font-size: 18px;
+}
+
+/* === LAYOUT "SINGLE SCREEN" === */
+html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden; background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-body); }
+.container { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 20px; gap: 20px; }
+header { flex-shrink: 0; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); }
+.dashboard-grid { flex-grow: 1; min-height: 0; display: grid; grid-template-columns: 350px 0.95fr; gap: 20px; }
+.sidebar { display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow-y: auto; padding-right: 10px; }
+.main-content { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
+.chart-card { flex: 1 1 60%; min-height: 0; } .ldr-card { flex: 1 1 40%; min-height: 0; }
+
+/* === ANIMATIONS GÉNÉRALES === */
+@keyframes flash-animation { 0% { text-shadow: none; } 50% { text-shadow: 0 0 15px var(--accent-color), 0 0 8px var(--accent-color); } 100% { text-shadow: none; } }
+.data-flash { animation: flash-animation 0.5s ease-out; }
+
+/* === EFFETS SPÉCIFIQUES AUX THÈMES === */
+/* Cyberpunk Scanlines */
+@keyframes scanline { from { background-position-y: 0; } to { background-position-y: 40px; } }
+
+/* Solarpunk Bubbles */
+#bubble-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; display: none; }
+body.solarpunk-mode #bubble-wrapper { display: block; }
+@keyframes rise { 0% { bottom: -100px; opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.1; } 100% { bottom: 105vh; opacity: 0; } }
+.bubble { position: absolute; background-color: var(--accent-color); border-radius: 50%; animation: rise 25s infinite ease-in; }
+.bubble:nth-child(1){width:40px;height:40px;left:10%;animation-duration:20s;} .bubble:nth-child(2){width:20px;height:20px;left:20%;animation-duration:15s;animation-delay:2s;} .bubble:nth-child(3){width:50px;height:50px;left:35%;animation-duration:30s;animation-delay:0s;} .bubble:nth-child(4){width:80px;height:80px;left:50%;animation-duration:40s;animation-delay:5s;} .bubble:nth-child(5){width:35px;height:35px;left:55%;animation-duration:18s;animation-delay:1s;} .bubble:nth-child(6){width:45px;height:45px;left:65%;animation-duration:28s;animation-delay:3s;} .bubble:nth-child(7){width:60px;height:60px;left:80%;animation-duration:22s;animation-delay:8s;}
+
+/* === NOUVEAU: EFFET VHS GLITCH === */
+#vhs-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 10; display: none; }
+body.vhs-mode #vhs-overlay { display: block; }
+#vhs-overlay::before, #vhs-overlay::after {
+    content: ''; position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+    background: rgba(18, 18, 51, 0.1);
+}
+/* Couche 1 du Glitch */
+#vhs-overlay::before {
+    animation: glitch-1 2s infinite linear alternate-reverse;
+}
+@keyframes glitch-1 {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-3px) skewX(0.5deg); }
+    30% { transform: translateX(5px); }
+    50% { transform: translateX(-8px) skewX(-0.8deg); }
+    70% { transform: translateX(10px); }
+    90% { transform: translateX(-1px) skewX(0.2deg); }
+}
+/* Couche 2 du Glitch avec coupures */
+#vhs-overlay::after {
+    animation: glitch-2 1.5s infinite linear alternate-reverse;
+}
+@keyframes glitch-2 {
+    0% { clip-path: inset(85% 0 5% 0); transform: translateY(-5px); }
+    20% { clip-path: inset(50% 0 42% 0); transform: translateY(3px); }
+    40% { clip-path: inset(10% 0 82% 0); transform: translateY(-8px); }
+    60% { clip-path: inset(60% 0 33% 0); transform: translateY(6px); }
+    80% { clip-path: inset(90% 0 2% 0); transform: translateY(-10px); }
+    100% { clip-path: inset(30% 0 65% 0); transform: translateY(0); }
+}
+/* Scanlines VHS */
+#vhs-scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 11; display: none; background: linear-gradient(0deg, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.05) 50%); background-size: 100% 4px; }
+body.vhs-mode #vhs-scanlines { display: block; }
+body.vhs-mode .card { border-radius: 0; box-shadow: inset 0 0 10px var(--vhs-magenta); }
+
+/* --- STYLES GÉNÉRAUX & MODULES (restent les mêmes) --- */
+.card { background: var(--card-color); display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; border: 1px solid var(--border-color); }
+.card-header { padding: 10px 15px; background: var(--border-color); color: var(--bg-color); font-family: var(--font-display); font-size: 1.1em; flex-shrink: 0; }
+.card-content { padding: 15px; flex-grow: 1; min-height: 0; display: flex; flex-direction: column; }
+.chart-wrapper { position: relative; flex-grow: 1; }
+.log-box { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.1); padding: 10px; font-size: 0.8em; }
+.ldr-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ldr-list li { display: grid; grid-template-columns: 50px 1fr 50px; align-items: center; gap: 10px; }
+.ldr-bar-wrapper { background: rgba(0,0,0,0.2); height: 15px; }
+.ldr-bar { background: var(--accent-color); height: 100%; width: 0%; transition: width 0.4s ease-out; }
+.settings-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.settings-form input { background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; text-align: right; width: 80px; }
+.settings-form button { grid-column: 1 / -1; padding: 12px; font-family: var(--font-display); background: var(--accent-color); color: var(--bg-color); border: none; cursor: pointer; }
