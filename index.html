@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solaris Data Hub // Retro Glitch Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono:wght@400;700&family=Quicksand:wght@400;600&family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="css/style.css"> {/* Added link to local CSS */}
+</head>
+<body>
+    <!-- Conteneurs pour les effets de fond -->
+    <div id="bubble-wrapper"></div>
+    <div id="vhs-overlay"></div>
+    <div id="vhs-scanlines"></div>
+
+    <div class="container">
+        <header>
+             <h1>SOLARIS DATA HUB</h1>
+             <div class="header-controls">
+                <div class="theme-toggle" id="theme-toggle" title="Changer de thème">📼</div>
+             </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <div class="sidebar">
+                <div class="card status-panel">
+                    <div class="card-header">SYSTEM STATUS</div>
+                    <div class="card-content">
+                        <ul class="data-list">
+                            <li><span>Puissance</span> <span id="power-value" class="value">...</span></li>
+                            <li><span>Tension</span> <span id="voltage-value" class="value">...</span></li>
+                            <li><span>Courant</span> <span id="current-value" class="value">...</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card settings-card">
+                    <div class="card-header">CONFIGURATION TRACKER</div>
+                    <div class="card-content">
+                        <form id="settings-form" class="settings-form">
+                            <label for="zoneMorte">Zone Morte</label> <input type="number" id="zoneMorte" value="10">
+                            <label for="delaiMouvement">Délai Mouvement</label> <input type="number" id="delaiMouvement" value="30">
+                            <label for="tailleMoyenne">Taille Moyenne</label> <input type="number" id="tailleMoyenne" value="3">
+                            <label for="intervalleScan">Intervalle Scan</label> <input type="number" id="intervalleScan" value="200">
+                            <button type="submit">Appliquer</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">EVENT LOG</div>
+                    <div class="card-content">
+                        <div class="log-box" id="log-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="card chart-card">
+                    <div class="card-header">PRODUCTION 24H (WATTS)</div>
+                    <div class="card-content">
+                        <div class="chart-wrapper">
+                            <canvas id="productionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card ldr-card">
+                    <div class="card-header">LDR RAW DATA</div>
+                    <div class="card-content">
+                        <ul class="ldr-list">
+                            <li><span>Haut</span> <div class="ldr-bar-wrapper"><div id="ldr-h-bar" class="ldr-bar"></div></div> <span id="ldr-h-value">...</span></li>
+                            <li><span>Bas</span> <div class="ldr-bar-wrapper"><div id="ldr-b-bar" class="ldr-bar"></div></div> <span id="ldr-b-value">...</span></li>
+                            <li><span>Gauche</span> <div class="ldr-bar-wrapper"><div id="ldr-g-bar" class="ldr-bar"></div></div> <span id="ldr-g-value">...</span></li>
+                            <li><span>Droite</span> <div class="ldr-bar-wrapper"><div id="ldr-d-bar" class="ldr-bar"></div></div> <span id="ldr-d-value">...</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script> {/* Added link to local JS */}
+</body>
+</html>
