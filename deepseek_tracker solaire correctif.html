@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Tracker - ESP32 C3</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Dark Theme (Default) */
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-card: #252525;
+            --text-primary: #ffffff;
+            --accent: #bb86fc;
+            --accent-secondary: #03dac6;
+            --danger: #cf6679;
+            --success: #4CAF50;
+            --glow-color: rgba(187, 134, 252, 0.4);
+        }
+
+        /* Redéfinition des variables pour chaque thème sur le body */
+        body.theme-light {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #f0f0f0;
+            --text-primary: #333333;
+            --accent: #6200ee;
+            --accent-secondary: #018786;
+            --danger: #e53935;
+            --success: #43a047;
+            --glow-color: rgba(98, 0, 238, 0.2);
+        }
+
+        body.theme-cyberpunk {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #0f1420;
+            --bg-card: #121a2a;
+            --text-primary: #e6de10;
+            --accent: #4b80bd;
+            --accent-secondary: #ff073a;
+            --danger: #ff073a;
+            --success: #00ff9f;
+            --glow-color: rgba(75, 128, 189, 0.4);
+        }
+
+        body.theme-solarpunk {
+            --bg-primary: #1a2e1d;
+            --bg-secondary: #2a4b2f;
+            --bg-card: #2c5a32;
+            --text-primary: #e0f7e0;
+            --accent: #8bc34a;
+            --accent-secondary: #ffeb3b;
+            --danger: #f44336;
+            --success: #8bc34a;
+            --glow-color: rgba(139, 195, 74, 0.3);
+        }
+
+        body.theme-y2k {
+            --bg-primary: #000000;
+            --bg-secondary: #330033;
+            --bg-card: #220033;
+            --text-primary: #ff00ff;
+            --accent: #00ffff;
+            --accent-secondary: #ffff00;
+            --danger: #ff0000;
+            --success: #00ff00;
+            --glow-color: rgba(0, 255, 255, 0.3);
+        }
+
+        body.theme-dark {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-card: #252525;
+            --text-primary: #ffffff;
+            --accent: #bb86fc;
+            --accent-secondary: #03dac6;
+            --danger: #cf6679;
+            --success: #4CAF50;
+            --glow-color: rgba(187, 134, 252, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: all 0.5s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--accent);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(to right, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px var(--glow-color);
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .theme-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .theme-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .theme-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--glow-color);
+        }
+
+        .theme-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 5px 15px var(--glow-color);
+        }
+
+        .connection-panel {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border: 1px solid var(--accent);
+        }
+
+        .connection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ip-input-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .ip-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent);
+            border-radius: 30px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .connect-btn {
+            padding: 12px 30px;
+            background: linear-gradient(45deg, var(--accent), var(--accent-secondary));
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px var(--glow-color);
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--glow-color);
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-led {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+        }
+
+        .status-working {
+            background: var(--success);
+            box-shadow: 0 0 15px var(--success);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .data-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border: 1px solid var(--accent);
+            transition: transform 0.3s;
+        }
+
+        .data-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px var(--glow-color);
+        }
+
+        .data-card h3 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .progress-container {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 1px solid var(--accent);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            border-radius: 10px;
+            width: 0%;
+            transition: width 1s ease;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .data-cell {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--accent);
+        }
+
+        .data-cell span:first-child {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .data-cell span:last-child {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border: 1px solid var(--accent);
+        }
+
+        .chart-container h2 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-wrapper {
+            height: 400px;
+            position: relative;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--accent);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--accent);
+            margin-top: 20px;
+        }
+
+        /* Effets spéciaux pour le thème cyberpunk */
+        body.theme-cyberpunk .cyber-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(75, 128, 189, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(75, 128, 189, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        body.theme-cyberpunk .cyber-scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: rgba(230, 222, 16, 0.3);
+            box-shadow: 0 0 20px rgba(230, 222, 16, 0.5);
+            animation: scan 4s linear infinite;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        .glitch {
+            position: relative;
+        }
+
+        body.theme-cyberpunk .glitch::before, 
+        body.theme-cyberpunk .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body.theme-cyberpunk .glitch::before {
+            left: 2px;
+            text-shadow: -1px 0 var(--accent-secondary);
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        body.theme-cyberpunk .glitch::after {
+            left: -2px;
+            text-shadow: -1px 0 var(--accent);
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(42px, 9999px, 44px, 0) }
+            20% { clip: rect(12px, 9999px, 59px, 0) }
+            40% { clip: rect(48px, 9999px, 29px, 0) }
+            60% { clip: rect(42px, 9999px, 73px, 0) }
+            80% { clip: rect(63px, 9999px, 27px, 0) }
+            100% { clip: rect(34px, 9999px, 55px, 0) }
+        }
+
+        @keyframes glitch-anim2 {
+            0% { clip: rect(65px, 9999px, 100px, 0) }
+            20% { clip: rect(52px, 9999px, 74px, 0) }
+            40% { clip: rect(79px, 9999px, 85px, 0) }
+            60% { clip: rect(54px, 9999px, 61px, 0) }
+            80% { clip: rect(106px, 9999px, 38px, 0) }
+            100% { clip: rect(93px, 9999px, 98px, 0) }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .ip-input-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body class="theme-dark">
+    <div class="cyber-grid"></div>
+    <div class="cyber-scanline"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">☀️</div>
+                <h1 class="glitch" data-text="SOLAR TRACKER ESP32">SOLAR TRACKER ESP32</h1>
+            </div>
+            <div class="theme-selector">
+                <button class="theme-btn active" data-theme="dark">Dark</button>
+                <button class="theme-btn" data-theme="light">Light</button>
+                <button class="theme-btn" data-theme="cyberpunk">Cyberpunk</button>
+                <button class="theme-btn" data-theme="solarpunk">Solarpunk</button>
+                <button class="theme-btn" data-theme="y2k">Y2K/VHS</button>
+            </div>
+        </header>
+        
+        <div class="connection-panel">
+            <div class="connection-header">
+                <h2>CONNEXION AU TRACKER SOLAIRE</h2>
+            </div>
+            <div class="ip-input-container">
+                <input type="text" class="ip-input" id="ip-input" placeholder="Adresse IP de l'ESP32 (ex: 192.168.1.100)" value="192.168.1.100">
+                <button class="connect-btn" id="connect-btn">CONNECTER</button>
+            </div>
+            <div class="status-container">
+                <div class="status-led" id="status-led"></div>
+                <span id="status-text">Non connecté</span>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <div class="data-card">
+                <h3><span>⚡</span> PRODUCTION SOLAIRE</h3>
+                <div class="value" id="power-value">0.0 W</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="power-bar"></div>
+                    </div>
+                    <div>Max: 12W</div>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <h3><span>🔋</span> STATISTIQUES</h3>
+                <div class="data-grid">
+                    <div class="data-cell">
+                        <span>TENSION</span>
+                        <span id="voltage-value">0.0 V</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>COURANT</span>
+                        <span id="current-value">0.0 A</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>ETAT</span>
+                        <span id="state-value">SLEEP</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>PUISSANCE MAX</span>
+                        <span>12.0 W</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <h3><span>📊</span> PERFORMANCES</h3>
+                <div class="data-grid">
+                    <div class="data-cell">
+                        <span>PROD. AUJOURD'HUI</span>
+                        <span id="today-production">0.0 Wh</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>PROD. HIER</span>
+                        <span id="yesterday-production">0.0 Wh</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>MAX JOURNALIER</span>
+                        <span id="max-daily">0.0 W</span>
+                    </div>
+                    <div class="data-cell">
+                        <span>EFFICACITÉ</span>
+                        <span id="efficiency">0.0 %</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h2><span>📈</span> PRODUCTION SUR 24 HEURES</h2>
+            <div class="chart-wrapper">
+                <canvas id="production-chart"></canvas>
+            </div>
+        </div>
+        
+        <footer>
+            Système de surveillance solaire ESP32 C3 | Données mises à jour en temps réel
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuration
+            const config = {
+                updateInterval: 3000, // 3 secondes
+                maxPower: 12.0,
+                maxVoltage: 7.0,
+                maxCurrent: 1.9
+            };
+            
+            // Références aux éléments DOM
+            const themeButtons = document.querySelectorAll('.theme-btn');
+            const ipInput = document.getElementById('ip-input');
+            const connectBtn = document.getElementById('connect-btn');
+            const statusLed = document.getElementById('status-led');
+            const statusText = document.getElementById('status-text');
+            const powerValue = document.getElementById('power-value');
+            const voltageValue = document.getElementById('voltage-value');
+            const currentValue = document.getElementById('current-value');
+            const stateValue = document.getElementById('state-value');
+            const powerBar = document.getElementById('power-bar');
+            const todayProduction = document.getElementById('today-production');
+            const yesterdayProduction = document.getElementById('yesterday-production');
+            const maxDaily = document.getElementById('max-daily');
+            const efficiency = document.getElementById('efficiency');
+            
+            // Données de simulation
+            let isConnected = false;
+            let intervalId = null;
+            let productionHistory = [];
+            let dailyData = [];
+            
+            // Initialisation du graphique
+            const ctx = document.getElementById('production-chart').getContext('2d');
+            let chart = null;
+            initChart();
+            
+            // Gestion des thèmes - VERSION CORRIGÉE
+            themeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    console.log('Bouton cliqué:', button.dataset.theme);
+                    
+                    // Retirer la classe active de tous les boutons
+                    themeButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Ajouter la classe active au bouton cliqué
+                    button.classList.add('active');
+                    
+                    // Changer le thème du body
+                    const newTheme = `theme-${button.dataset.theme}`;
+                    console.log('Nouveau thème:', newTheme);
+                    
+                    // Supprimer toutes les classes de thème existantes
+                    document.body.className = document.body.className.replace(/theme-\w+/g, '');
+                    
+                    // Ajouter la nouvelle classe de thème
+                    document.body.classList.add(newTheme);
+                    
+                    console.log('Classes appliquées:', document.body.className);
+                    
+                    // Sauvegarder le thème dans localStorage
+                    localStorage.setItem('selectedTheme', button.dataset.theme);
+                });
+            });
+            
+            // Charger le thème sauvegardé au démarrage
+            const savedTheme = localStorage.getItem('selectedTheme');
+            if (savedTheme) {
+                const savedButton = document.querySelector(`[data-theme="${savedTheme}"]`);
+                if (savedButton) {
+                    // Retirer active de tous
+                    themeButtons.forEach(btn => btn.classList.remove('active'));
+                    // Activer le bon bouton
+                    savedButton.classList.add('active');
+                    // Appliquer le thème
+                    document.body.className = document.body.className.replace(/theme-\w+/g, '');
+                    document.body.classList.add(`theme-${savedTheme}`);
+                }
+            }
+            
+            // Connexion à l'ESP32
+            connectBtn.addEventListener('click', () => {
+                const ip = ipInput.value.trim();
+                
+                if (!validateIP(ip)) {
+                    alert("Veuillez entrer une adresse IP valide (ex: 192.168.1.100)");
+                    return;
+                }
+                
+                if (isConnected) {
+                    disconnect();
+                } else {
+                    connect(ip);
+                }
+            });
+            
+            function validateIP(ip) {
+                return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+            }
+            
+            function connect(ip) {
+                isConnected = true;
+                statusText.textContent = "Connexion...";
+                statusLed.style.backgroundColor = "orange";
+                
+                // Simuler la connexion
+                setTimeout(() => {
+                    statusText.textContent = "Connecté";
+                    statusLed.style.backgroundColor = "#4CAF50";
+                    connectBtn.textContent = "DÉCONNECTER";
+                    
+                    // Démarrer la mise à jour périodique
+                    intervalId = setInterval(() => updateData(ip), config.updateInterval);
+                    updateData(ip); // Première mise à jour immédiate
+                }, 1000);
+            }
+            
+            function disconnect() {
+                isConnected = false;
+                clearInterval(intervalId);
+                statusText.textContent = "Non connecté";
+                statusLed.style.backgroundColor = "#f44336";
+                connectBtn.textContent = "CONNECTER";
+                resetUI();
+            }
+            
+            function updateData(ip) {
+                // Simulation de données - dans un vrai projet, vous feriez une requête à l'ESP32
+                const now = new Date();
+                const hour = now.getHours();
+                
+                // Générer des données aléatoires réalistes
+                const isDaytime = hour > 6 && hour < 20;
+                const baseVoltage = isDaytime ? (Math.random() * 2 + 5) : 0;
+                const voltage = parseFloat((baseVoltage + (Math.random() * 0.5 - 0.25)).toFixed(2));
+                const current = parseFloat((isDaytime ? Math.random() * 1.5 : 0).toFixed(2));
+                const power = parseFloat((voltage * current).toFixed(2));
+                const state = power > 1.0 ? "WORKING" : "SLEEP";
+                
+                // Mettre à jour l'interface
+                updateUI(voltage, current, power, state);
+                updateChart(voltage, current, power, state);
+            }
+            
+            function updateUI(voltage, current, power, state) {
+                powerValue.textContent = `${power.toFixed(2)} W`;
+                voltageValue.textContent = `${voltage.toFixed(2)} V`;
+                currentValue.textContent = `${current.toFixed(2)} A`;
+                stateValue.textContent = state;
+                
+                // Barre de progression
+                const powerPercent = Math.min((power / config.maxPower) * 100, 100);
+                powerBar.style.width = `${powerPercent}%`;
+                
+                // Mettre à jour les indicateurs d'état
+                if (state === "WORKING") {
+                    statusLed.classList.add("status-working");
+                    statusText.textContent = "Production en cours";
+                } else {
+                    statusLed.classList.remove("status-working");
+                    statusText.textContent = "Connecté (veille)";
+                }
+                
+                // Mettre à jour les statistiques
+                todayProduction.textContent = `${(power * 0.2).toFixed(1)} Wh`;
+                yesterdayProduction.textContent = `${(11.5).toFixed(1)} Wh`;
+                maxDaily.textContent = `${Math.min(power + 1.5, 12).toFixed(1)} W`;
+                efficiency.textContent = `${Math.min((power / 11) * 100, 100).toFixed(1)} %`;
+            }
+            
+            function resetUI() {
+                powerValue.textContent = "0.0 W";
+                voltageValue.textContent = "0.0 V";
+                currentValue.textContent = "0.0 A";
+                stateValue.textContent = "SLEEP";
+                powerBar.style.width = "0%";
+                todayProduction.textContent = "0.0 Wh";
+                yesterdayProduction.textContent = "0.0 Wh";
+                maxDaily.textContent = "0.0 W";
+                efficiency.textContent = "0.0 %";
+            }
+            
+            function initChart() {
+                const hours = Array.from({length: 24}, (_, i) => `${i}h`);
+                
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hours,
+                        datasets: [{
+                            label: 'Production (W)',
+                            data: Array(24).fill(0),
+                            borderColor: 'var(--accent)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'var(--accent)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: config.maxPower,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'var(--text-primary)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'var(--text-primary)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'var(--text-primary)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function updateChart(voltage, current, power, state) {
+                const now = new Date();
+                const hour = now.getHours();
+                
+                // Mettre à jour la donnée actuelle
+                chart.data.datasets[0].data[hour] = power;
+                
+                // Historique des jours précédents (simulation)
+                if (dailyData.length < 3) {
+                    const newDay = Array(24).fill(0).map((_, i) => {
+                        const hourPower = i >= 6 && i <= 18 ? 
+                            Math.min(11, Math.abs(6 - Math.abs(12 - i)) * 1.2 + Math.random() * 2) : 
+                            Math.random() * 0.5;
+                        return parseFloat(hourPower.toFixed(2));
+                    });
+                    dailyData.push(newDay);
+                }
+                
+                // Mettre à jour le graphique avec l'historique
+                chart.data.datasets = [];
+                
+                // Ajouter les jours historiques avec transparence
+                dailyData.forEach((dayData, index) => {
+                    const alpha = 1 - (0.2 * (dailyData.length - index - 1));
+                    chart.data.datasets.push({
+                        label: index === dailyData.length - 1 ? "Aujourd'hui" : `Jour -${dailyData.length - index}`,
+                        data: dayData,
+                        borderColor: `rgba(75, 128, 189, ${alpha})`,
+                        backgroundColor: `rgba(75, 128, 189, ${alpha * 0.1})`,
+                        borderWidth: index === dailyData.length - 1 ? 3 : 2,
+                        pointRadius: index === dailyData.length - 1 ? 4 : 0,
+                        tension: 0.4,
+                        fill: true
+                    });
+                });
+                
+                chart.update();
+            }
+            
+            // Simulation de données initiale pour le graphique
+            for (let i = 0; i < 3; i++) {
+                const dayData = Array(24).fill(0).map((_, hour) => {
+                    if (hour >= 6 && hour <= 18) {
+                        return parseFloat((Math.min(11, Math.abs(6 - Math.abs(12 - hour)) * 1.2 + Math.random() * 2)).toFixed(2));
+                    }
+                    return Math.random() * 0.5;
+                });
+                dailyData.push(dayData);
+            }
+        });
+    </script>
+</body>
+</html>
