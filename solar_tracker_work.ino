@@ -3,11 +3,21 @@
 // ===       LDRs + Moteurs DC + OLED SH1107 + INA219            ===
 // =================================================================
 
+// Note: Ensure ESPAsyncWebServer and AsyncTCP libraries are installed in your Arduino IDE.
 // --- Bibliothèques nécessaires ---
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Adafruit_INA219.h>
+#include <WiFi.h> // Added WiFi library
+#include <ESPAsyncWebServer.h> // Added ESPAsyncWebServer
+
+// === WiFi Credentials ===
+char ssid[] = "YOUR_SSID";     // your network SSID (name)
+char password[] = "YOUR_PASSWORD"; // your network password
+
+// === Web Server Instance ===
+AsyncWebServer server(80);
 
 // === Définition des broches ===
 #define LDR_GAUCHE 1
@@ -31,8 +41,8 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 Adafruit_INA219 ina219;
 
 // === Paramètres de contrôle du tracker ===
-const int zoneMorte = 10;       // Hystérésis pour éviter les oscillations (à ajuster)
-const int delaiMouvement = 30; // Durée d'activation des moteurs en ms pour chaque ajustement
+int zoneMorte = 10;       // Hystérésis pour éviter les oscillations (à ajuster)
+int delaiMouvement = 30; // Durée d'activation des moteurs en ms pour chaque ajustement
 const int tailleMoyenne = 3;    // Nombre de lectures pour la moyenne glissante
 
 // === Variables pour la moyenne glissante des LDR ===
@@ -48,6 +58,13 @@ int moyGauche, moyDroite, moyHaut, moyBas;
 float busVoltage = 0, current_mA = 0, power_mW = 0;
 String etatHorizontal = "Stop";
 String etatVertical = "Stop";
+// String systemDisplayStatus = "Work"; // Removed for this subtask
+
+// === Variables globales pour les valeurs LDR brutes actuelles ===
+int currentRawLDR_G = 0;
+int currentRawLDR_D = 0;
+int currentRawLDR_H = 0;
+int currentRawLDR_B = 0;
 
 // === Variables pour la temporisation ===
 unsigned long dernierScan = 0;
@@ -55,6 +72,69 @@ const int intervalleScan = 200; // Lire les capteurs et ajuster toutes les 200ms
 
 void setup() {
   Serial.begin(115200);
+
+  // Initialize motor pins to a safe state (LOW) early to prevent unwanted movement
+  pinMode(MOTEUR_H_IN1, OUTPUT);
+  pinMode(MOTEUR_H_IN2, OUTPUT);
+  pinMode(MOTEUR_V_IN1, OUTPUT);
+  pinMode(MOTEUR_V_IN2, OUTPUT);
+
+  digitalWrite(MOTEUR_H_IN1, LOW);
+  digitalWrite(MOTEUR_H_IN2, LOW);
+  digitalWrite(MOTEUR_V_IN1, LOW);
+  digitalWrite(MOTEUR_V_IN2, LOW);
+
+  // --- WiFi Connection ---
+  Serial.println(); // Print a newline for better readability
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+
+  unsigned long startTime = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+    // Timeout after 15 seconds (15000 ms)
+    if (millis() - startTime > 15000) {
+      Serial.println();
+      Serial.println("Failed to connect to WiFi!");
+      break; // Exit the while loop
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    // --- Web Server Setup ---
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+      String html = buildHtmlPage(); // Call the function to get HTML
+      request->send(200, "text/html", html); // Send HTML response
+    });
+
+    // Handler for updating parameters
+    server.on("/update_params", HTTP_GET, [](AsyncWebServerRequest *request){
+      if (request->hasParam("zoneMorte")) {
+        String zm_str = request->getParam("zoneMorte")->value();
+        zoneMorte = zm_str.toInt();
+        Serial.print("zoneMorte updated to: "); Serial.println(zoneMorte);
+      }
+      if (request->hasParam("delaiMouvement")) {
+        String dm_str = request->getParam("delaiMouvement")->value();
+        delaiMouvement = dm_str.toInt();
+        Serial.print("delaiMouvement updated to: "); Serial.println(delaiMouvement);
+      }
+      request->redirect("/"); // Redirect back to the main page
+    });
+
+    server.begin();
+    Serial.println("HTTP server started");
+
+  } else {
+    Serial.println();
+    Serial.println("WiFi connection attempt finished."); // Or some other status
+  }
 
   // --- Initialisation I2C ---
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -86,11 +166,9 @@ void setup() {
   }
   
   // --- Configuration des broches moteurs ---
-  pinMode(MOTEUR_H_IN1, OUTPUT);
-  pinMode(MOTEUR_H_IN2, OUTPUT);
-  pinMode(MOTEUR_V_IN1, OUTPUT);
-  pinMode(MOTEUR_V_IN2, OUTPUT);
-  stopMoteurs(); // S'assurer que les moteurs sont à l'arrêt au démarrage
+  // pinMode calls are now done earlier for safety.
+  // MOTEUR_H_IN1, MOTEUR_H_IN2, MOTEUR_V_IN1, MOTEUR_V_IN2 are already OUTPUT and LOW.
+  stopMoteurs(); // S'assurer que les moteurs sont à l'arrêt au démarrage (re-confirms LOW state)
 
   // --- Initialisation de la moyenne glissante ---
   // On "charge" le tableau avec des valeurs initiales pour une moyenne plus réactive
@@ -120,18 +198,65 @@ void loop() {
 
 // === Fonctions principales ===
 
-void lireCapteurs() {
-  // Soustrait l'ancienne valeur et ajoute la nouvelle
-  totalGauche = totalGauche - lecturesGauche[indiceMoyenne] + analogRead(LDR_GAUCHE);
-  totalDroite = totalDroite - lecturesDroite[indiceMoyenne] + analogRead(LDR_DROITE);
-  totalHaut   = totalHaut   - lecturesHaut[indiceMoyenne]   + analogRead(LDR_HAUT);
-  totalBas    = totalBas    - lecturesBas[indiceMoyenne]    + analogRead(LDR_BAS);
+String buildHtmlPage() {
+  String html = "<!DOCTYPE html><html lang='fr'>";
+  html += "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+  html += "<title>ESP32 Solar Tracker Stats</title></head>";
+  html += "<body><h1>ESP32 Solar Tracker Statistics</h1>";
 
-  // Met à jour le tableau avec la nouvelle valeur
-  lecturesGauche[indiceMoyenne] = analogRead(LDR_GAUCHE);
-  lecturesDroite[indiceMoyenne] = analogRead(LDR_DROITE);
-  lecturesHaut[indiceMoyenne]   = analogRead(LDR_HAUT);
-  lecturesBas[indiceMoyenne]    = analogRead(LDR_BAS);
+  html += "<h2>Raw LDR Values</h2>";
+  html += "<p>Gauche (Raw): " + String(currentRawLDR_G) + "</p>";
+  html += "<p>Droite (Raw): " + String(currentRawLDR_D) + "</p>";
+  html += "<p>Haut (Raw): " + String(currentRawLDR_H) + "</p>";
+  html += "<p>Bas (Raw): " + String(currentRawLDR_B) + "</p>";
+
+  html += "<h2>Averaged LDR Values</h2>";
+  html += "<p>Gauche (Avg): " + String(moyGauche) + "</p>";
+  html += "<p>Droite (Avg): " + String(moyDroite) + "</p>";
+  html += "<p>Haut (Avg): " + String(moyHaut) + "</p>";
+  html += "<p>Bas (Avg): " + String(moyBas) + "</p>";
+
+  // New section for Control Parameters
+  html += "<h2>Control Parameters</h2>";
+  html += "<form action='/update_params' method='GET'>";
+
+  html += "<label for='zoneMorte'>Dead Zone (zoneMorte):</label>";
+  html += "<input type='number' id='zoneMorte' name='zoneMorte' value='" + String(zoneMorte) + "'><br><br>";
+
+  html += "<label for='delaiMouvement'>Movement Delay (delaiMouvement):</label>";
+  html += "<input type='number' id='delaiMouvement' name='delaiMouvement' value='" + String(delaiMouvement) + "'><br><br>";
+
+  html += "<input type='submit' value='Update Parameters'>";
+  html += "</form>";
+
+  html += "</body></html>";
+  return html;
+}
+
+void lireCapteurs() {
+  // Lecture LDR Gauche
+  currentRawLDR_G = analogRead(LDR_GAUCHE);
+  Serial.print("Raw G: "); Serial.println(currentRawLDR_G);
+  totalGauche = totalGauche - lecturesGauche[indiceMoyenne] + currentRawLDR_G;
+  lecturesGauche[indiceMoyenne] = currentRawLDR_G;
+
+  // Lecture LDR Droite
+  currentRawLDR_D = analogRead(LDR_DROITE);
+  Serial.print("Raw D: "); Serial.println(currentRawLDR_D);
+  totalDroite = totalDroite - lecturesDroite[indiceMoyenne] + currentRawLDR_D;
+  lecturesDroite[indiceMoyenne] = currentRawLDR_D;
+
+  // Lecture LDR Haut
+  currentRawLDR_H = analogRead(LDR_HAUT);
+  Serial.print("Raw H: "); Serial.println(currentRawLDR_H);
+  totalHaut   = totalHaut   - lecturesHaut[indiceMoyenne]   + currentRawLDR_H;
+  lecturesHaut[indiceMoyenne]   = currentRawLDR_H;
+
+  // Lecture LDR Bas
+  currentRawLDR_B = analogRead(LDR_BAS);
+  Serial.print("Raw B: "); Serial.println(currentRawLDR_B);
+  totalBas    = totalBas    - lecturesBas[indiceMoyenne]    + currentRawLDR_B;
+  lecturesBas[indiceMoyenne]    = currentRawLDR_B;
 
   // Calcule les nouvelles moyennes
   moyGauche = totalGauche / tailleMoyenne;
@@ -150,9 +275,36 @@ void lirePuissance() {
 }
 
 void controlerMoteurs() {
+  int darkLDRCount = 0;
+  if (moyGauche > 2000) {
+    darkLDRCount++;
+  }
+  if (moyDroite > 2000) {
+    darkLDRCount++;
+  }
+  if (moyHaut > 2000) {
+    darkLDRCount++;
+  }
+  if (moyBas > 2000) {
+    darkLDRCount++;
+  }
+
+  if (darkLDRCount >= 3) {
+    stopMoteurs();
+    etatHorizontal = "Sleep";
+    etatVertical = "Sleep";
+    // systemDisplayStatus = "Sleep"; // Removed
+    Serial.println("Sleep mode: 3+ LDRs > 2000."); // Debug message
+    return; // Exit the function
+  }
+
+  // If not sleeping, then we are in "Work" mode (either moving or stopped)
+  // systemDisplayStatus = "Work"; // Removed
+
   // --- Contrôle Horizontal ---
+  etatHorizontal = "Stop"; // Default to Stop for this cycle
   if (abs(moyGauche - moyDroite) > zoneMorte) {
-    if (moyGauche > moyDroite) {
+    if (moyGauche < moyDroite) { // Inverted condition
       tournerGauche();
       etatHorizontal = "Gauche";
     } else {
@@ -161,12 +313,12 @@ void controlerMoteurs() {
     }
     delay(delaiMouvement); // Active le moteur pour une courte durée
   }
-  stopMoteurHorizontal(); // Arrête toujours le moteur après l'impulsion
-  etatHorizontal = "Stop";
+  stopMoteurHorizontal(); // Always stop motor after the check/pulse
 
   // --- Contrôle Vertical ---
+  etatVertical = "Stop"; // Default to Stop for this cycle
   if (abs(moyHaut - moyBas) > zoneMorte) {
-    if (moyHaut > moyBas) {
+    if (moyHaut < moyBas) { // Inverted condition
       monter();
       etatVertical = "Haut";
     } else {
@@ -175,46 +327,45 @@ void controlerMoteurs() {
     }
     delay(delaiMouvement);
   }
-  stopMoteurVertical();
-  etatVertical = "Stop";
+  stopMoteurVertical(); // Always stop motor after the check/pulse
 }
 
 void mettreAJourOLED() {
-  display.clearDisplay();
+  display.clearDisplay(); // Clear the entire display first
 
-  // --- Colonne de gauche : Capteurs LDR ---
-  display.setCursor(0, 0);
-  display.print("LDR_MATRIX");
-  display.setCursor(0, 12);
-  display.printf("G:%-4d", moyGauche);
-  display.setCursor(0, 22);
-  display.printf("D:%-4d", moyDroite);
-  display.setCursor(0, 32);
-  display.printf("H:%-4d", moyHaut);
-  display.setCursor(0, 42);
-  display.printf("B:%-4d", moyBas);
-
-  // Ligne de séparation verticale
-  display.drawFastVLine(63, 0, 52, SH110X_WHITE);
-
-  // --- Colonne de droite : Puissance INA219 ---
-  display.setCursor(68, 0);
-  display.print("Power");
-  display.setCursor(68, 12);
-  display.printf("%.2f V", busVoltage);
-  display.setCursor(68, 22);
-  display.printf("%.1f mA", current_mA);
-  display.setCursor(68, 32);
-  display.printf("%.1f mW", power_mW);
-
-  // Ligne de séparation horizontale en bas
-  display.drawFastHLine(0, 53, 128, SH110X_WHITE);
+  // --- Power Data Display (Top-Left) ---
+  // TextSize 1: Font height is typically 8px. Max 6 lines on 64px height with some spacing.
+  // Logical screen width is 128, height is 64.
   
-  // --- Ligne du bas : Statut du système ---
-  display.setCursor(3, 56);
-  display.print("STATUS: TRACKING...");
+  display.setCursor(0, 0); // Line 0
+  display.print("Power Stats:");
   
-  display.display();
+  display.setCursor(0, 10); // Line 1
+  display.printf("V: %.2f V", busVoltage);
+
+  display.setCursor(0, 20); // Line 2
+  display.printf("C: %.1f mA", current_mA);
+
+  display.setCursor(0, 30); // Line 3
+  display.printf("P: %.1f mW", power_mW);
+
+  // --- IP Address Display (Middle) ---
+  display.setCursor(0, 42); // Line 4
+  display.print("IP: ");
+  if (WiFi.status() == WL_CONNECTED) {
+    display.print(WiFi.localIP().toString());
+  } else {
+    display.print("N/A");
+  }
+
+  // Optional: Horizontal line to separate IP from Mode status
+  // display.drawFastHLine(0, 52, 128, SH110X_WHITE); // Line just below IP
+
+  // --- System Status Line (Bottom) ---
+  // Mode display removed as per subtask requirements.
+  // The last line of display (Y=56) is now free.
+
+  display.display(); // Update the display with all the new content
 }
 
 
